@@ -5,7 +5,7 @@
 
 import hashlib
 
-class StonePiece:
+class Stone:
     def __init__(self, color):
         if color < 0:
             raise Exception("invalid stone color")
@@ -32,19 +32,27 @@ class Board:
         self._dims = dims
         self._stones = {}
 
-    def place_stone(self, coord, color):
+    def place_stone(self, coord, stone):
         if not self.__check_coord(coord):
             raise Exception("stone out of board")
         if coord in self._stones:
             raise Exception("there's already a stone in the coordinate")
-        self._stones[coord] = StonePiece(color)
+        self._stones[coord] = stone
 
-    def remove_stone(self, coord, color):
-        if not self.__check_coord(coord):
-            raise Exception("stone out of bound")
+    def remove_stone(self, coord):
         if coord not in self._stones:
             raise Exception("no stone at the coordinate")
         del self._stones[coord]
+
+    def change_stone(self, coord, stone):
+        if coord not in self._stones:
+            raise Exception("no stone at the coordinate")
+        self._stones[coord] = stone
+
+    def get_stone_at(self, coord):
+        if coord not in self._stones:
+            return None
+        return self._stones[coord]
 
     def __check_coord(self, coord):
         if len(self._dims) !=  len(coord):
