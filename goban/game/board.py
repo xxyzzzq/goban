@@ -4,22 +4,28 @@
 # of the MIT license.  See the LICENSE file for details.
 
 import hashlib
-
-class Stone:
-    def __init__(self, color):
-        if color < 0:
-            raise Exception("invalid stone color")
-        self.__color = color
-
-    def get_color(self):
-        return self.__color
-
-    def set_color(self, color):
-        if color < 0:
-            raise Exception("invalid stone color")
-        self.__color = color
+from abc import ABCMeta, abstractmethod
 
 class Board:
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def place_stone(self, coord, stone):
+        pass
+
+    @abstractmethod
+    def remove_stone(self, coord):
+        pass
+
+    @abstractmethod
+    def change_stone(self, coord, stone):
+        pass
+
+    @abstractmethod
+    def get_stone_at(self, coord):
+        pass
+
+class GoBoard:
     def __init__(self, dims):
         if not isinstance(dims, tuple) or len(dims) == 0:
             raise Exception("bad dims")
