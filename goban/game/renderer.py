@@ -6,13 +6,14 @@
 from abc import ABCMeta, abstractmethod
 
 class Renderer:
+    __metaclass__ = ABCMeta
+
     def __init__(self, args):
         self.__args = args
 
-    @abstractmethod:
-    def start(self, args):
+    @abstractmethod
+    def start(self, game, renderer_cb):
         pass
 
-    @abstractmethod:
-    def update():
+    def update(self, args):
         pass

@@ -15,13 +15,13 @@ class Game:
     def connect(self, client):
         self.__rule.connect(client)
 
-    def update_render(self):
-        self.__renderer.update()
+    def update_render(self, args):
+        self.__renderer.update(args)
 
     def start_game(self):
         self.__board = self.__rule.create_board()
         self.__rule.set_up()
-        self.__render.start()
+        self.__render.start(self, None)
 
     def run(self):
         self.__rule.run(self)

@@ -39,7 +39,7 @@ class GoBoard:
         self._stones = {}
 
     def place_stone(self, coord, stone):
-        if not self.__check_coord(coord):
+        if not self.check_coord(coord):
             raise Exception("stone out of board")
         if coord in self._stones:
             raise Exception("there's already a stone in the coordinate")
@@ -60,7 +60,10 @@ class GoBoard:
             return None
         return self._stones[coord]
 
-    def __check_coord(self, coord):
+    def get_dims(self):
+        return self._dims
+
+    def check_coord(self, coord):
         if len(self._dims) !=  len(coord):
             return False
         for ((lb, ub), pos) in zip(self._dims, coord):
