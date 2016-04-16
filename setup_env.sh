@@ -1,3 +1,4 @@
 #!/bin/bash
 
-export PYTHONPATH=$(pwd):$PYTHONPATH
+dir=`dirname $BASH_SOURCE`
+export PYTHONPATH=$dir:$PYTHONPATH
