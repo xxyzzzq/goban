@@ -15,6 +15,10 @@ class Client:
         game.connect(self)
 
     @abstractmethod
+    def on_connected(self, args):
+        pass
+
+    @abstractmethod
     def prepare(self, args):
         pass
 

@@ -8,8 +8,8 @@ from abc import ABCMeta, abstractmethod
 class Rule:
     __metaclass__ = ABCMeta
 
-    def __init__(self, args):
-        self._args = args
+    def __init__(self, game):
+        self._game = game
         self._clients = {}
 
     def connect(self, client):
@@ -20,26 +20,27 @@ class Rule:
     def disconnect(self, client_id):
         del self._client[client_id]
 
-    @abstractclass
+    @abstractmethod
     def can_connect(self, client):
         pass
 
-    @abstractclass
+    @abstractmethod
     def create_board(self):
         pass
 
+    @abstractmethod
+    def _can_start(self):
+        pass
+
     def run(self, game):
-        if not self.__check_clients():
-            raise Exception("clients not ready")
+        self._run_internal(game)
 
-        self.__notify_client()
-        self.__run_internal()
-
-    def set_up():
+    @abstractmethod
+    def set_up(self):
         ''' should assign client id, notify clients and do other initializations '''
         pass
 
-    @abstractclass
-    def __run_internal():
+    @abstractmethod
+    def _run_internal(self, game):
         ''' game loop '''
         pass

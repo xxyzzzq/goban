@@ -9,25 +9,28 @@ from goban.game.stone import ColoredStone
 
 class DummyRule(Rule):
     def __init__(self, args):
-        super().__init__(args)
+        Rule.__init__(self, args)
+
+    def create_board(self):
+        return GoBoard(((0, 10), (0, 10)))
 
     def can_connect(self, client):
         return true
 
-    def create_board(self):
-        return GoBoard((0, 10), (0, 10))
-
-    def __set_up(self):
+    def set_up(self):
         if len(self._clients) == 0:
             raise Exception("clients not ready")
-        for (client_id, client) in self._clients:
+        for (client_id, client) in self._clients.items():
             client.prepare({'color': client_id})
 
-    def __run_internal(self, game):
-        for i in range(0, 10):
-            for (client_id, client) in self._clients:
+    def _run_internal(self, game):
+        for i in range(0, 5):
+            for (client_id, client) in self._clients.items():
                 next_move = client.get_next_move()
                 coord = next_move["coord"]
                 color = next_move["color"]
                 game.get_board().place_stone(coord, ColoredStone(color))
-                game.update_renderer()
+                game.update_renderer({"coord": coord, "stone": ColoredStone(color)})
+
+    def _can_start(self):
+        return True
