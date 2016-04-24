@@ -18,7 +18,6 @@ def main():
     game.connect(client2)
     game.start_game()
     game.run()
-    game.finalize()
 
 if __name__ == "__main__":
     main()

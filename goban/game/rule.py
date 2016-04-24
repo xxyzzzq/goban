@@ -11,9 +11,11 @@ class Rule:
     def __init__(self, game):
         self._game = game
         self._clients = {}
+        self._next_client_id = 0
 
     def connect(self, client):
-        client_id = len(self._clients)
+        client_id = self._next_client_id
+        self._next_client_id = self._next_client_id + 1
         self._clients[client_id] = client
         client.on_connected(client_id)
 
@@ -36,11 +38,15 @@ class Rule:
         self._run_internal(game)
 
     @abstractmethod
-    def set_up(self):
+    def set_up(self, args):
         ''' should assign client id, notify clients and do other initializations '''
         pass
 
     @abstractmethod
     def _run_internal(self, game):
         ''' game loop '''
+        pass
+
+    @abstractmethod
+    def on_ui_terminate(self):
         pass

@@ -8,8 +8,8 @@ from abc import ABCMeta, abstractmethod
 class Client:
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        self._client_id = -1
+    def __init__(self, uuid):
+        self.uuid = uuid
 
     def connect(self, game):
         game.connect(self)
@@ -29,9 +29,12 @@ class Client:
            "changed_stone": { "coord": <coord>, ...} |
            "removed_stone": { "coord": <coord>}] ...}
         '''
-
         pass
 
     @abstractmethod
     def get_next_move(self):
+        pass
+
+    @abstractmethod
+    def on_game_end(self, game_result):
         pass

@@ -1,0 +1,22 @@
+{
+    "rule_class": "goban.modules.rules.gomoku.GomokuRule",
+    "renderer_class": "goban.modules.renderers.goboard_renderer.GoBoardRenderer",
+    "clients": [
+    	{
+    	    "class_name": "goban.modules.clients.goboard_file_client.GoBoardFileClient",
+    	    "args": {
+    		"name": "client_1",
+    		"uri": "goban:clientid:1",
+    		"file": "moves_1.txt"
+    	    }
+    	},
+    	{
+    	    "class_name": "goban.modules.clients.goboard_file_client.GoBoardFileClient",
+    	    "args": {
+    		"name": "client_2",
+    		"uri": "goban:clientid:2",
+    		"file": "moves_2.txt"
+    	    }
+    	}
+    ]
+}

@@ -24,6 +24,7 @@ class DummyRule(Rule):
             client.prepare({'color': client_id})
 
     def _run_internal(self, game):
+        self._game = game
         for i in range(0, 5):
             for (client_id, client) in self._clients.items():
                 next_move = client.get_next_move()
@@ -34,3 +35,6 @@ class DummyRule(Rule):
 
     def _can_start(self):
         return True
+
+    def on_ui_terminate(self):
+        self._game.finalize()

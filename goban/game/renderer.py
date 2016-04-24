@@ -8,8 +8,8 @@ from abc import ABCMeta, abstractmethod
 class Renderer:
     __metaclass__ = ABCMeta
 
-    def __init__(self, game):
-        self._game = game
+    def __init__(self):
+        pass
 
     @abstractmethod
     def start(self, game, renderer_cb):
@@ -19,5 +19,6 @@ class Renderer:
     def finalize(self):
         pass
 
+    @abstractmethod
     def update(self, args):
         pass

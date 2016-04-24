@@ -10,7 +10,7 @@ class Game:
 
     def prepare(self, args):
         self.__rule = self.__rule_class(self)
-        self.__renderer = self.__renderer_class(self)
+        self.__renderer = self.__renderer_class()
 
     def connect(self, client):
         self.__rule.connect(client)
@@ -21,13 +21,16 @@ class Game:
     def start_game(self):
         self.__board = self.__rule.create_board()
         self.__rule.set_up()
-        self.__renderer.start(None)
+        self.__renderer.start(self, None)
 
     def run(self):
         self.__rule.run(self)
 
     def get_board(self):
         return self.__board
+
+    def on_ui_terminate(self):
+        self.__rule.on_ui_terminate()
 
     def finalize(self):
         self.__renderer.finalize()
