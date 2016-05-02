@@ -8,8 +8,9 @@ from abc import ABCMeta, abstractmethod
 class Rule:
     __metaclass__ = ABCMeta
 
-    def __init__(self, game):
+    def __init__(self, game, args):
         self._game = game
+        self._args = args
         self._clients = {}
         self._next_client_id = 0
 

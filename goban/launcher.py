@@ -5,12 +5,26 @@
 
 import sys
 import argparse
-import importlib
 import json
-import goban.game.game
+
+from goban.base.import_helper import import_helper
+from goban.game.game import Game
 
 def main(config):
-    pass
+    rule_class = import_helper(config['rule_class'])
+    args = config['args']
+    renderer_class = import_helper(config['renderer_class'])
+
+    game = Game(rule_class, renderer_class)
+    game.prepare(args)
+
+    for client_config in config['clients']:
+        client_class = import_helper(client_config['class_name'])
+        client_args = client_config['args']
+        game.connect(client_class(client_args))
+
+    game.start_game()
+    game.run()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Goban launcher")

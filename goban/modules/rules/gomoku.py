@@ -7,21 +7,21 @@ from goban.game.rule import Rule
 from goban.game.board import GoBoard
 from goban.game.stone import ColoredStone
 
-class GomokuRule(Rule):
-    BLACK_COLOR = 0
-    WHITE_COLOR = 1
+BLACK_COLOR = 0
+WHITE_COLOR = 1
 
-    def __init__(self, args):
-        Rule.__init__(self, args)
-        self.__args = args
+class GomokuRule(Rule):
+
+    def __init__(self, game, args):
+        Rule.__init__(self, game, args)
 
     def create_board(self):
-        return GoBoard(self.__args['dims'])
+        return GoBoard(self.__list_to_tuple_recursive(self._args['dims']))
 
     def can_connect(self, client):
         return len(self._clients) < 2
 
-    def set_up(self, args):
+    def set_up(self):
         if not self._can_start():
             raise Exception("need exactly 2 clients")
         clients = {}
@@ -33,9 +33,9 @@ class GomokuRule(Rule):
 
         self._client_id_to_color = {}
         self._color_to_client_id = {}
-        black_client_uuid = args['black_client_uuid']
+        black_client_id = self._args['black_client_id']
         for (client_id, client) in self._clients.items():
-            if client.uuid == start_client_uuid:
+            if client.client_id == black_client_id:
                 self._client_id_to_color[client_id] = BLACK_COLOR
                 self._color_to_client_id[BLACK_COLOR] = client_id
                 client.prepare({'color': BLACK_COLOR})
@@ -58,6 +58,10 @@ class GomokuRule(Rule):
             if game_result != None:
                 self.__notify_game_end(game_result)
                 break
+            if turn == BLACK_COLOR:
+                turn = WHITE_COLOR
+            else:
+                turn = BLACK_COLOR
 
     def __notify_game_end(self, game_result):
         for (client_id, client) in self._clients.items():
@@ -69,3 +73,15 @@ class GomokuRule(Rule):
     def on_ui_terminate(self):
         self.__notify_game_end(None)
         self._game.finalize()
+
+    def __list_to_tuple_recursive(self, l):
+        result = []
+        for item in l:
+            if isinstance(item, list):
+                result.append(self.__list_to_tuple_recursive(item))
+            else:
+                result.append(item)
+        return tuple(result)
+
+    def _check_result(self, coord, color):
+        return None

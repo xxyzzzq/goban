@@ -10,7 +10,6 @@ class DummyClient(Client):
         super(Client, self).__init__()
         self.__next_x = start_x
         self.__next_y = start_y
-        pass
 
     def on_connected(self, args):
         pass

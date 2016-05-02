@@ -8,8 +8,9 @@ from abc import ABCMeta, abstractmethod
 class Client:
     __metaclass__ = ABCMeta
 
-    def __init__(self, uuid):
-        self.uuid = uuid
+    def __init__(self, args):
+        self.client_id = args['client_id']
+        self.name = args['name']
 
     def connect(self, game):
         game.connect(self)

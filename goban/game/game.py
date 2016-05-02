@@ -9,7 +9,7 @@ class Game:
         self.__renderer_class = renderer_class
 
     def prepare(self, args):
-        self.__rule = self.__rule_class(self)
+        self.__rule = self.__rule_class(self, args)
         self.__renderer = self.__renderer_class()
 
     def connect(self, client):
