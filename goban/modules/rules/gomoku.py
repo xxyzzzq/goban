@@ -3,6 +3,8 @@
 # This software may be modified and distributed under the terms
 # of the MIT license.  See the LICENSE file for details.
 
+import copy
+
 from goban.game.rule import Rule
 from goban.game.board import GoBoard
 from goban.game.stone import ColoredStone
@@ -15,8 +17,6 @@ class GomokuRule(Rule):
     def __init__(self, game, args):
         Rule.__init__(self, game, args)
 
-    def create_board(self):
-        return GoBoard(self.__list_to_tuple_recursive(self._args['dims']))
 
     def can_connect(self, client):
         return len(self._clients) < 2
@@ -36,24 +36,27 @@ class GomokuRule(Rule):
             if client.client_id == black_client_id:
                 self._client_id_to_color[client_id] = BLACK_COLOR
                 self._color_to_client_id[BLACK_COLOR] = client_id
-                client.prepare({'color': BLACK_COLOR})
             else:
                 self._client_id_to_color[client_id] = WHITE_COLOR
                 self._color_to_client_id[WHITE_COLOR] = client_id
-                client.prepare({'color': WHITE_COLOR})
+
+        # Create board
+        self._board = GoBoard(self.__list_to_tuple_recursive(self._args['dims']))
 
         # Broadcast game start
         for (client_id, client) in self._clients.items():
             self._send_client_message(client,
                                       {'type': 'game_start',
-                                       'board': self._game.get_board(),
+                                       'board': copy.deepcopy(self._board),
                                        'color': self._client_id_to_color[client_id]})
         self.__notify_client_to_move(self.__next_color)
 
     def _handle_message(self, message):
-        if message['type'] == 'renderer_exit':
-            self.__handle_renderer_exit(message)
-        if message['type'] == 'place_stone':
+        if message['type'] == 'ui_exit':
+            self.__handle_ui_exit(message)
+        elif message['type'] == 'ui_click':
+            self.__handle_ui_click(message)
+        elif message['type'] == 'place_stone':
             self.__handle_place_stone(message)
 
     def __other_color(self, color):
@@ -64,25 +67,28 @@ class GomokuRule(Rule):
 
     def __handle_place_stone(self, message):
         coord = message['coord']
-        color = next_move['color']
-        client_id = next_move['client_id']
+        color = message['color']
+        client_id = message['client_id']
         # Placing a stone of the opponent's color
-        if color != self._client_id_to_color[color]:
+        if color != self._client_id_to_color[client_id]:
             self.__on_game_over(color, "placing opponent's stone")
         # Not your turn
         if color != self.__next_color:
             self.__on_game_over(self.__other_color(color), "not your turn")
         try:
-            self._game.get_board().place_stone(coord, ColoredStone(color))
+            self._board.place_stone(coord, ColoredStone(color))
         except Exception as e:
             # Illegal move
             self.__on_game_over(self.__other_color(color))
         self._game.update_renderer({'type': 'new_stone',
                                     'coord': coord,
                                     'stone': ColoredStone(color)})
+        self._broadcast_client_message({'type': 'new_stone',
+                                        'coord': coord,
+                                        'stone': ColoredStone(color)})
 
         (win_side, reason) = self._check_result(coord, color)
-        if win_side != None:
+        if reason != None:
             self.__on_game_over(win_side, reason)
             return
         self.__next_color = self.__other_color(self.__next_color)
@@ -93,14 +99,21 @@ class GomokuRule(Rule):
         self._send_client_message(self._clients[client_id], {'type': 'get_next_move'})
 
     def __on_game_over(self, win_side, reason):
-        pass
+        self._broadcast_client_message({'type': 'game_over',
+                                        'win_side': win_side,
+                                        'reason': reason})
+        for client_id in self._clients.keys():
+            self.disconnect(self, client.client_id)
 
     def _can_start(self):
         return len(self._clients) == 2
 
-    def __handle_renderer_exit(self):
-        self.__on_game_over(self, None, "renderer_exit")
+    def __handle_ui_exit(self, message):
+        self.__on_game_over(None, "ui_exit")
         self._game.finalize()
+
+    def __handle_ui_click(self, message):
+        self._broadcast_client_message(message)
 
     def __list_to_tuple_recursive(self, l):
         result = []
@@ -112,4 +125,7 @@ class GomokuRule(Rule):
         return tuple(result)
 
     def _check_result(self, coord, color):
-        return None
+        if self._board.is_full():
+            return None, "board is full"
+
+        return None, None

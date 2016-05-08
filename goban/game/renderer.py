@@ -5,7 +5,7 @@
 
 from abc import ABCMeta, abstractmethod
 
-class Renderer:
+class RendererHost:
     __metaclass__ = ABCMeta
 
     def __init__(self):

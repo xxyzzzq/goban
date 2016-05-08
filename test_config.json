@@ -4,7 +4,7 @@
 	"dims": [[0, 10], [0, 10]],
 	"black_client_id": "goban:clientid:1"
     },
-    "renderer_class": "goban.modules.renderers.goboard_renderer.GoBoardRenderer",
+    "renderer_class": "goban.modules.renderers.goboard_renderer.GoBoardRendererHost",
     "clients": [
     	{
     	    "class_name": "goban.modules.clients.goboard_file_client.GoBoardFileClient",

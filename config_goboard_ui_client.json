@@ -1,0 +1,24 @@
+{
+    "rule_class": "goban.modules.rules.gomoku.GomokuRule",
+    "args": {
+	"dims": [[0, 2], [0, 2]],
+	"black_client_id": "goban:clientid:1"
+    },
+    "renderer_class": "goban.modules.renderers.goboard_renderer.GoBoardRendererHost",
+    "clients": [
+    	{
+    	    "class_name": "goban.modules.clients.goboard_interactive_client.GoBoardInteractiveClient",
+    	    "args": {
+    		"name": "client_1",
+    		"client_id": "goban:clientid:1"
+    	    }
+    	},
+    	{
+    	    "class_name": "goban.modules.clients.goboard_interactive_client.GoBoardInteractiveClient",
+    	    "args": {
+    		"name": "client_2",
+    		"client_id": "goban:clientid:2"
+    	    }
+    	}
+    ]
+}

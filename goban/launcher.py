@@ -24,7 +24,6 @@ def main(config):
         game.connect(client_class(client_args))
 
     game.start_game()
-    game.run()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Goban launcher")
@@ -32,5 +31,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     with open(args.config_file) as config_file:
         config = json.load(config_file)
-    print config
     main(config)

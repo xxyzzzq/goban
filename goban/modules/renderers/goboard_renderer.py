@@ -3,30 +3,31 @@
 # This software may be modified and distributed under the terms
 # of the MIT license.  See the LICENSE file for details.
 
+import copy
 import time
 import sys
 import threading
 from multiprocessing import Process, Queue
 import pygame
 from goban.game.board import GoBoard
-from goban.game.renderer import Renderer
+from goban.game.renderer import RendererHost
 from goban.base.event import GobanEvent
 
-class GoBoardRenderer(Renderer):
+class GoBoardRendererHost(RendererHost):
     def __init__(self):
         self.__host_queue = Queue()
-        self.__slave_queue = Queue()
+        self.__impl_queue = Queue()
         # Spawn the host queue listener thread
         self.__host_queue_listener_thread = threading.Thread(
-            target=GoBoardRenderer.__host_queue_loop,
+            target=GoBoardRendererHost.__host_queue_loop,
             name='GoBoardRendererHostQueueListenerThread',
             args=(self,))
         self.__host_queue_listener_thread.start()
-        # Spawn the Render slave process
-        self.__slave = Process(target=_renderer_slave_main,
-                               name='GoBoardRenderSlaveProcess',
-                               args=(self.__slave_queue, self.__host_queue,))
-        self.__slave.start()
+        # Spawn the Render impl process
+        self.__impl_process = Process(target=_renderer_impl_main,
+                              name='GoBoardRenderImplProcess',
+                              args=(self.__impl_queue, self.__host_queue,))
+        self.__impl_process.start()
 
     def start(self, game, renderer_cb):
         if not isinstance(game.get_board(), GoBoard):
@@ -37,54 +38,55 @@ class GoBoardRenderer(Renderer):
         self.__game = game
         self.__renderer_cb = renderer_cb
         # send start event
-        self.__slave_queue.put(GobanEvent('init', {'dims': game.get_board().get_dims()}))
+        self.__impl_queue.put(GobanEvent('init', {'dims': game.get_board().get_dims()}))
 
     def finalize(self):
         self.__host_queue.put(GobanEvent('finalize', None))
-        # TODO(xxyzzzq): don't join because deadlock issue, need to improve.
-        # self.__host_queue_listener_thread.join()
-        self.__slave_queue.put(GobanEvent('finalize', None))
-        self.__slave.join()
+        self.__host_queue_listener_thread.join()
+        self.__impl_queue.put(GobanEvent('finalize', None))
+        self.__impl_process.join()
 
     def update(self, args):
-        self.__slave_queue.put(GobanEvent('place_stone', args))
+        self.__impl_queue.put(GobanEvent('place_stone', args))
 
     def __host_queue_loop(self):
         print 'host_queue_loop start'
         while True:
             event = self.__host_queue.get()
-            if event.type == 'uiquit':
+            if event.type == 'ui_click':
+                self.__game.enqueue_message({'type': 'ui_click', 'coord': event.args})
+            elif event.type == 'ui_exit':
                 if self.__game:
-                    self.__game.on_ui_terminate()
+                    self.__game.enqueue_message({'type': 'ui_exit'})
             elif event.type == 'finalize':
                 break
             else:
                 raise Exception('unknown host queue event')
 
-def _renderer_slave_main(slave_queue, host_queue):
-    slave = _GoBoardRendererSlave(slave_queue, host_queue)
-    slave.run_loop()
+def _renderer_impl_main(impl_queue, host_queue):
+    impl = _GoBoardRendererImpl(impl_queue, host_queue)
+    impl.run_loop()
 
-class _GoBoardRendererSlave:
+class _GoBoardRendererImpl:
 
-    def __init__(self, slave_queue, host_queue):
+    def __init__(self, impl_queue, host_queue):
         if not pygame.init():
             raise Exception("failed to init pygame")
-        self.__slave_queue = slave_queue
+        self.__impl_queue = impl_queue
         self.__host_queue = host_queue
-        # Start the slave queue listener thread
-        self.__slave_queue_forwarder_thread = threading.Thread(
-            target=_GoBoardRendererSlave.__slave_queue_loop,
-                                         name="slave queue forwarder thread",
-                                         args=(self,))
-        self.__slave_queue_forwarder_thread.start()
+        # Start the impl queue listener thread
+        self.__impl_queue_forwarder_thread = threading.Thread(
+            target=_GoBoardRendererImpl.__impl_queue_loop,
+            name="impl queue forwarder thread",
+            args=(self,))
+        self.__impl_queue_forwarder_thread.start()
 
-    def __slave_queue_loop(self):
+    def __impl_queue_loop(self):
         '''
-        Forwards the slave queue loop to pygame, must run on child thread.
+        Forwards the impl queue loop to pygame, must run on child thread.
         '''
         while True:
-            event = self.__slave_queue.get()
+            event = self.__impl_queue.get()
             # Tries to post the event to the pygame event queue until success
             while True:
                 try:
@@ -110,10 +112,10 @@ class _GoBoardRendererSlave:
                 raise Exception("resizing not supported")
             elif event.type == pygame.QUIT:
                 print "QUIT"
-                self.__host_queue.put(GobanEvent('uiquit', None))
+                self.__host_queue.put(GobanEvent('ui_exit', None))
             elif event.type == pygame.MOUSEBUTTONUP:
                 print "MOUSEBUTTONUP"
-                self.__handle_mouse_up()
+                self.__handle_mouse_up(event)
             elif event.type == pygame.USEREVENT:
                 event_type = event.user_event_type
                 event_args = event.args
@@ -189,9 +191,18 @@ class _GoBoardRendererSlave:
                             pygame.Rect(self.__get_stone_position(coord),
                                         (self.__STONE_RADIUS * 2, self.__STONE_RADIUS * 2)), 2)
 
-    def __handle_mouse_up(self):
-        pass
+    def __handle_mouse_up(self, event):
+        if event.button != 1:
+            return
+        pos = list(event.pos)
+        pos[0] = pos[0] - self.__BOARD_MARGIN + self.__GRID_SIZE / 2
+        pos[1] = pos[1] - self.__BOARD_MARGIN + self.__GRID_SIZE / 2
+        coord = (self.__lb + pos[0] / self.__GRID_SIZE, self.__ub + pos[1] / self.__GRID_SIZE)
+        print coord
+        if coord[0] > self.__rb or coord[1] > self.__bb:
+            return
+        self.__host_queue.put(GobanEvent('ui_click', coord))
 
     def __handle_finalize_event(self):
         pygame.display.quit()
-        self.__slave_queue_forwarder_thread.join()
+        self.__impl_queue_forwarder_thread.join()

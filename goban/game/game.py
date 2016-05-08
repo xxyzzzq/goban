@@ -19,18 +19,15 @@ class Game:
         self.__renderer.update(args)
 
     def start_game(self):
-        self.__board = self.__rule.create_board()
-        self.__rule.set_up()
+        self.__rule.start_game()
         self.__renderer.start(self, None)
 
-    def run(self):
-        self.__rule.run(self)
-
     def get_board(self):
-        return self.__board
+        return self.__rule.get_board()
 
-    def on_ui_terminate(self):
-        self.__rule.on_ui_terminate()
+    def enqueue_message(self, message):
+        self.__rule.enqueue_message(message)
 
     def finalize(self):
         self.__renderer.finalize()
+        self.enqueue_message({'type': 'quit'})

@@ -3,6 +3,7 @@
 # This software may be modified and distributed under the terms
 # of the MIT license.  See the LICENSE file for details.
 
+import Queue
 from abc import ABCMeta, abstractmethod
 from threading import Thread
 
@@ -12,15 +13,17 @@ class Rule:
     def __init__(self, game, args):
         self._game = game
         self._args = args
-        self.__message_queue = Queue()
+        self.__message_queue = Queue.Queue()
         self._clients = {}
 
     def connect(self, client):
         self._clients[client.client_id] = client
-        client.on_connected(client_id)
+        self._send_client_message(client, {'type': 'connected',
+                                           'rule': self})
 
     def _send_client_message(self, client, message):
-        client.enqueue_messaeg(message)
+        print "send_client_message", message
+        client.enqueue_message(message)
 
     def _broadcast_client_message(self, message):
         for client in self._clients.values():
@@ -32,41 +35,37 @@ class Rule:
     def enqueue_message(self, message):
         self.__message_queue.put(message)
 
-    @abstractmethod
-    def can_connect(self, client):
-        pass
+    def get_board(self):
+        return self._board
 
     @abstractmethod
-    def create_board(self):
+    def can_connect(self, client):
         pass
 
     @abstractmethod
     def _can_start(self):
         pass
 
-    def start_game(self, game):
-        self._game = game
+    def start_game(self):
         self._setup_game()
         self.__run_loop_thread = Thread(target=Rule.__message_loop,
                                         name=("Rule message loop thread"),
                                         args=(self,))
+        self.__run_loop_thread.start()
 
     def __message_loop(self):
         while True:
             message = self.__message_queue.get()
+            print "rule.message_loop:", message
             if message['type'] == 'quit':
-                # This should only be received from Game
+                # Must come from Game.finalize
                 break
             self._handle_message(message)
 
     @abstractmethod
-    def _init_game(self, game):
+    def _setup_game(self):
         pass
 
     @abstractmethod
     def _handle_message(self, message):
-        pass
-
-    @abstractmethod
-    def on_ui_terminate(self):
         pass

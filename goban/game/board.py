@@ -37,6 +37,10 @@ class GoBoard:
 
         self._dims = dims
         self._stones = {}
+        self._num_stones = 0
+        self._max_num_stones = 1
+        for dim in dims:
+            self._max_num_stones = self._max_num_stones * (dim[1] - dim[0] + 1)
 
     def place_stone(self, coord, stone):
         if not self.check_coord(coord):
@@ -44,11 +48,13 @@ class GoBoard:
         if coord in self._stones:
             raise Exception("there's already a stone in the coordinate")
         self._stones[coord] = stone
+        self._num_stones = self._num_stones + 1
 
     def remove_stone(self, coord):
         if coord not in self._stones:
             raise Exception("no stone at the coordinate")
         del self._stones[coord]
+        self._num_stones = self._num_stones - 1
 
     def change_stone(self, coord, stone):
         if coord not in self._stones:
@@ -72,3 +78,9 @@ class GoBoard:
             if pos > ub:
                 return False
         return True
+
+    def is_full(self):
+        print self._num_stones, self._max_num_stones
+        if (self._num_stones > self._max_num_stones):
+            raise Exception("number of stones reached out of limit")
+        return self._num_stones == self._max_num_stones
