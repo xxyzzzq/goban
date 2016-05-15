@@ -43,6 +43,7 @@ class GoBoard:
             self._max_num_stones = self._max_num_stones * (dim[1] - dim[0] + 1)
 
     def place_stone(self, coord, stone):
+        print "place_stone", coord, stone
         if not self.check_coord(coord):
             raise Exception("stone out of board")
         if coord in self._stones:
