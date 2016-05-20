@@ -12,6 +12,7 @@ import pygame
 from goban.game.board import GoBoard
 from goban.game.renderer import RendererHost
 from goban.base.event import GobanEvent
+from goban.modules.renderers.button import Button
 
 class GoBoardRendererHost(RendererHost):
     def __init__(self):
@@ -140,11 +141,15 @@ class _GoBoardRendererImpl:
         self.__STONE_LINE_WIDTH = 5
         self.__GRID_COLOR = pygame.Color("black")
         self.__BOARD_COLOR = pygame.Color("white")
+        self.__BUTTON_WIDTH = 80
+        self.__BUTTON_HEIGHT = 40
+        self.__BUTTON_COLOR = pygame.Color("yellow")
 
         ((self.__lb, self.__rb), (self.__ub, self.__bb)) = args['dims']
 
         self.__screen = pygame.display.set_mode(self.__get_display_size())
         self.__draw_board()
+        self.__draw_buttons()
         pygame.event.post(pygame.event.Event(pygame.VIDEOEXPOSE, {}))
 
     def __handle_place_stone_event(self, args):
@@ -152,8 +157,8 @@ class _GoBoardRendererImpl:
         pygame.event.post(pygame.event.Event(pygame.VIDEOEXPOSE, {}))
 
     def __get_display_size(self):
-        h_size = (self.__rb - self.__lb) * self.__GRID_SIZE + 2 * self.__BOARD_MARGIN
-        v_size = (self.__bb - self.__ub) * self.__GRID_SIZE + 2 * self.__BOARD_MARGIN
+        h_size = self.__board_x_dim() * self.__GRID_SIZE + 2 * self.__BOARD_MARGIN
+        v_size = self.__board_y_dim() * self.__GRID_SIZE + 2 * self.__BOARD_MARGIN
 
         return (h_size, v_size)
 
@@ -170,7 +175,7 @@ class _GoBoardRendererImpl:
             pygame.draw.line(self.__screen, self.__GRID_COLOR,
                              (self.__BOARD_MARGIN,
                               self.__BOARD_MARGIN + self.__GRID_SIZE * x),
-                             (self.__BOARD_MARGIN + self.__GRID_SIZE * (self.__rb - self.__lb),
+                             (self.__BOARD_MARGIN + self.__GRID_SIZE * self.__board_x_dim(),
                               self.__BOARD_MARGIN + self.__GRID_SIZE * x),
                              self.__GRID_WIDTH)
         for y in range(self.__ub, self.__bb + 1):
@@ -178,7 +183,7 @@ class _GoBoardRendererImpl:
                              (self.__BOARD_MARGIN + self.__GRID_SIZE * y,
                               self.__BOARD_MARGIN),
                              (self.__BOARD_MARGIN + self.__GRID_SIZE * y,
-                              self.__BOARD_MARGIN + self.__GRID_SIZE * (self.__bb - self.__ub)),
+                              self.__BOARD_MARGIN + self.__GRID_SIZE * self.__board_y_dim()),
                              self.__GRID_WIDTH)
 
     def __draw_stone(self, coord, stone):
@@ -191,10 +196,32 @@ class _GoBoardRendererImpl:
                             pygame.Rect(self.__get_stone_position(coord),
                                         (self.__STONE_RADIUS * 2, self.__STONE_RADIUS * 2)), 2)
 
+    def __draw_buttons(self):
+        button_rect = pygame.Rect(0, 0, self.__BUTTON_WIDTH, self.__BUTTON_HEIGHT)
+        button_rect.centerx = int(self.__BOARD_MARGIN * 1.5 +
+                                  self.__GRID_SIZE * self.__board_x_dim())
+        button_rect.centery = int(self.__BOARD_MARGIN * 0.5)
+
+        self.__undo_button = Button(self.__screen, button_rect,
+                                    self.__BUTTON_COLOR, "UNDO")
+
+        button_rect.centery = int(button_rect.centery + 1.5 * self.__BUTTON_HEIGHT)
+        self.__redo_button = Button(self.__screen, button_rect,
+                                    self.__BUTTON_COLOR, "REDO")
+        self.__undo_button.draw()
+        self.__redo_button.draw()
+
     def __handle_mouse_up(self, event):
         if event.button != 1:
             return
         pos = list(event.pos)
+        if self.__undo_button.catch_click(pos):
+            self.__handle_undo()
+            return
+        if self.__redo_button.catch_click(pos):
+            self.__handle_redo()
+            return
+
         pos[0] = pos[0] - self.__BOARD_MARGIN + self.__GRID_SIZE / 2
         pos[1] = pos[1] - self.__BOARD_MARGIN + self.__GRID_SIZE / 2
         coord = (self.__lb + pos[0] / self.__GRID_SIZE, self.__ub + pos[1] / self.__GRID_SIZE)
@@ -206,3 +233,15 @@ class _GoBoardRendererImpl:
     def __handle_finalize_event(self):
         pygame.display.quit()
         self.__impl_queue_forwarder_thread.join()
+
+    def __board_x_dim(self):
+        return self.__rb - self.__lb
+
+    def __board_y_dim(self):
+        return self.__bb - self.__ub
+
+    def __handle_undo(self):
+        pass
+
+    def __handle_redo(self):
+        pass
