@@ -19,22 +19,35 @@ class GoBoardInteractiveClient(Client):
             self.__handle_get_next_move(message)
         elif message['type'] == 'new_stone':
             self.__handle_new_stone(message)
+        elif message['type'] == 'remove_stone':
+            self.__handle_remove_stone(message)
         elif message['type'] == 'ui_click':
             self.__handle_ui_click(message)
         elif message['type'] == 'game_over':
             self.__handle_game_over(message)
+        elif message['type'] == 'disconnect':
+            self.__handle_disconnect(message)
 
     def __handle_game_start(self, message):
         self.__color = message['color']
         self.__board = message['board']
 
     def __handle_get_next_move(self, message):
+        print "Client.get_next_move" + str(self.__color)
         self.__is_waiting_for_next_move = True
 
     def __handle_new_stone(self, message):
+        print "Client.handle_new_stone"
         coord = message['coord']
         stone = message['stone']
         self.__board.place_stone(coord, stone)
+        self.__is_waiting_for_next_move = False
+
+    def __handle_remove_stone(self, message):
+        print "Client.handle_remove_stone"
+        coord = message['coord']
+        self.__board.remove_stone(coord)
+        self.__is_waiting_for_next_move = False
 
     def __handle_ui_click(self, message):
         if not self.__is_waiting_for_next_move:
@@ -48,4 +61,7 @@ class GoBoardInteractiveClient(Client):
             self.__is_waiting_for_next_move = False
 
     def __handle_game_over(self, message):
+        self.__is_waiting_for_next_move = False
+
+    def __handle_disconnect(self, message):
         self.enqueue_message({'type': 'quit'})

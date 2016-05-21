@@ -30,6 +30,7 @@ class Rule:
             self._send_client_message(client, message)
 
     def disconnect(self, client_id):
+        self._send_client_message(self._clients[client_id], {'type': 'disconnect'})
         del self._clients[client_id]
 
     def enqueue_message(self, message):

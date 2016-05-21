@@ -48,7 +48,7 @@ class GoBoardRendererHost(RendererHost):
         self.__impl_process.join()
 
     def update(self, args):
-        self.__impl_queue.put(GobanEvent('place_stone', args))
+        self.__impl_queue.put(GobanEvent('update', args))
 
     def __host_queue_loop(self):
         print 'host_queue_loop start'
@@ -59,6 +59,10 @@ class GoBoardRendererHost(RendererHost):
             elif event.type == 'ui_exit':
                 if self.__game:
                     self.__game.enqueue_message({'type': 'ui_exit'})
+            elif event.type == 'ui_undo':
+                self.__game.enqueue_message({'type': 'ui_undo'})
+            elif event.type == 'ui_redo':
+                self.__game.enqueue_message({'type': 'ui_redo'})
             elif event.type == 'finalize':
                 break
             else:
@@ -123,8 +127,12 @@ class _GoBoardRendererImpl:
                 print "USEREVENT, ", event_type, event_args
                 if event_type == 'init':
                     self.__handle_init_event(event_args)
-                elif event_type == 'place_stone':
-                    self.__handle_place_stone_event(event_args)
+                elif event_type == 'update':
+                    print "[Update]" + str(event_args)
+                    if event_args['type'] == "new_stone":
+                        self.__handle_place_stone_event(event_args)
+                    if event_args['type'] == "remove_stone":
+                        self.__handle_remove_stone_event(event_args)
                 elif event_type == 'finalize':
                     self.__handle_finalize_event()
                     return
@@ -156,6 +164,10 @@ class _GoBoardRendererImpl:
         self.__draw_stone(args["coord"], args["stone"])
         pygame.event.post(pygame.event.Event(pygame.VIDEOEXPOSE, {}))
 
+    def __handle_remove_stone_event(self, args):
+        self.__clear_stone(args["coord"])
+        pygame.event.post(pygame.event.Event(pygame.VIDEOEXPOSE, {}))
+
     def __get_display_size(self):
         h_size = self.__board_x_dim() * self.__GRID_SIZE + 2 * self.__BOARD_MARGIN
         v_size = self.__board_y_dim() * self.__GRID_SIZE + 2 * self.__BOARD_MARGIN
@@ -163,10 +175,8 @@ class _GoBoardRendererImpl:
         return (h_size, v_size)
 
     def __get_stone_position(self, coord):
-        h_pos = ((coord[0] - self.__lb) * self.__GRID_SIZE +
-                 self.__BOARD_MARGIN - self.__STONE_RADIUS)
-        v_pos = ((coord[1] - self.__ub) * self.__GRID_SIZE +
-                 self.__BOARD_MARGIN - self.__STONE_RADIUS)
+        h_pos = (coord[0] - self.__lb) * self.__GRID_SIZE + self.__BOARD_MARGIN
+        v_pos = (coord[1] - self.__ub) * self.__GRID_SIZE + self.__BOARD_MARGIN
         return (h_pos, v_pos)
 
     def __draw_board(self):
@@ -188,13 +198,45 @@ class _GoBoardRendererImpl:
 
     def __draw_stone(self, coord, stone):
         color = stone.get_color()
-        pygame.draw.ellipse(self.__screen, self.__STONE_COLORS[color],
-                            pygame.Rect(self.__get_stone_position(coord),
+        surface = pygame.Surface((self.__STONE_RADIUS * 2, self.__STONE_RADIUS * 2))
+        surface.fill(self.__BOARD_COLOR)
+        pygame.draw.ellipse(surface, self.__STONE_COLORS[color],
+                            pygame.Rect((0, 0),
                                         (self.__STONE_RADIUS * 2, self.__STONE_RADIUS * 2)))
 
-        pygame.draw.ellipse(self.__screen, pygame.Color("black"),
-                            pygame.Rect(self.__get_stone_position(coord),
+        pygame.draw.ellipse(surface, pygame.Color("black"),
+                            pygame.Rect((0, 0),
                                         (self.__STONE_RADIUS * 2, self.__STONE_RADIUS * 2)), 2)
+        rect = surface.get_rect()
+        rect.center = self.__get_stone_position(coord)
+        self.__screen.blit(surface, rect)
+
+    def __clear_stone(self, coord):
+        surface = pygame.Surface((self.__GRID_SIZE, self.__GRID_SIZE))
+        surface.fill(self.__BOARD_COLOR)
+        if coord[0] != self.__lb:
+            pygame.draw.line(surface, self.__GRID_COLOR,
+                         (0, self.__GRID_SIZE * 0.5),
+                         (self.__GRID_SIZE * 0.5, self.__GRID_SIZE * 0.5),
+                         self.__GRID_WIDTH)
+        if coord[0] != self.__rb:
+            pygame.draw.line(surface, self.__GRID_COLOR,
+                         (self.__GRID_SIZE * 0.5, self.__GRID_SIZE * 0.5),
+                         (self.__GRID_SIZE, self.__GRID_SIZE * 0.5),
+                         self.__GRID_WIDTH)
+        if coord[1] != self.__ub:
+            pygame.draw.line(surface, self.__GRID_COLOR,
+                             (self.__GRID_SIZE * 0.5, 0),
+                             (self.__GRID_SIZE * 0.5, self.__GRID_SIZE * 0.5),
+                             self.__GRID_WIDTH)
+        if coord[1] != self.__bb:
+            pygame.draw.line(surface, self.__GRID_COLOR,
+                             (self.__GRID_SIZE * 0.5, self.__GRID_SIZE * 0.5),
+                             (self.__GRID_SIZE * 0.5, self.__GRID_SIZE),
+                             self.__GRID_WIDTH)
+        rect = surface.get_rect()
+        rect.center = self.__get_stone_position(coord)
+        self.__screen.blit(surface, rect)
 
     def __draw_buttons(self):
         button_rect = pygame.Rect(0, 0, self.__BUTTON_WIDTH, self.__BUTTON_HEIGHT)
@@ -202,12 +244,12 @@ class _GoBoardRendererImpl:
                                   self.__GRID_SIZE * self.__board_x_dim())
         button_rect.centery = int(self.__BOARD_MARGIN * 0.5)
 
+        self.__redo_button = Button(self.__screen, button_rect,
+                                    self.__BUTTON_COLOR, "REDO")
+        button_rect.centerx = int(button_rect.centerx - 1.5 * self.__BUTTON_WIDTH)
         self.__undo_button = Button(self.__screen, button_rect,
                                     self.__BUTTON_COLOR, "UNDO")
 
-        button_rect.centery = int(button_rect.centery + 1.5 * self.__BUTTON_HEIGHT)
-        self.__redo_button = Button(self.__screen, button_rect,
-                                    self.__BUTTON_COLOR, "REDO")
         self.__undo_button.draw()
         self.__redo_button.draw()
 
@@ -216,10 +258,10 @@ class _GoBoardRendererImpl:
             return
         pos = list(event.pos)
         if self.__undo_button.catch_click(pos):
-            self.__handle_undo()
+            self.__host_queue.put(GobanEvent('ui_undo', None))
             return
         if self.__redo_button.catch_click(pos):
-            self.__handle_redo()
+            self.__host_queue.put(GobanEvent('ui_redo', None))
             return
 
         pos[0] = pos[0] - self.__BOARD_MARGIN + self.__GRID_SIZE / 2
@@ -239,9 +281,3 @@ class _GoBoardRendererImpl:
 
     def __board_y_dim(self):
         return self.__bb - self.__ub
-
-    def __handle_undo(self):
-        pass
-
-    def __handle_redo(self):
-        pass

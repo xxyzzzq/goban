@@ -2,7 +2,6 @@
 #
 # This software may be modified and distributed under the terms
 # of the MIT license.  See the LICENSE file for details.
-
 import copy
 
 from goban.game.rule import Rule
@@ -10,13 +9,13 @@ from goban.game.board import GoBoard
 from goban.game.stone import ColoredStone
 from goban.modules.rules.gomoku_utils import *
 from goban.modules.rules.gomoku_checkers import GomokuCheckerManager
-
+from goban.modules.rules.move_recorder import MoveRecorder
 
 class GomokuRule(Rule):
 
     def __init__(self, game, args):
         Rule.__init__(self, game, args)
-
+        self.__move_recorder = MoveRecorder()
 
     def can_connect(self, client):
         return len(self._clients) < 2
@@ -56,16 +55,21 @@ class GomokuRule(Rule):
             self.__handle_ui_exit(message)
         elif message['type'] == 'ui_click':
             self.__handle_ui_click(message)
+        elif message['type'] == 'ui_undo':
+            self.__handle_ui_undo()
+        elif message['type'] == 'ui_redo':
+            self.__handle_ui_redo()
         elif message['type'] == 'place_stone':
             self.__handle_place_stone(message)
 
-    def __handle_place_stone(self, message):
+    def __handle_place_stone(self, message, is_redo = False):
         coord = message['coord']
         color = message['color']
-        client_id = message['client_id']
-        # Placing a stone of the opponent's color
-        if color != self._client_id_to_color[client_id]:
-            self.__on_game_over(color, "placing opponent's stone")
+        if not is_redo:
+            client_id = message['client_id']
+            # Placing a stone of the opponent's color
+            if color != self._client_id_to_color[client_id]:
+                self.__on_game_over(color, "placing opponent's stone")
         # Not your turn
         if color != self.__next_color:
             self.__on_game_over(other_color(color), "not your turn")
@@ -73,19 +77,33 @@ class GomokuRule(Rule):
             self._board.place_stone(coord, ColoredStone(color))
         except Exception as e:
             # Illegal move
-            self.__on_game_over(other_color(color))
-        self._game.update_renderer({'type': 'new_stone',
-                                    'coord': coord,
-                                    'stone': ColoredStone(color)})
-        self._broadcast_client_message({'type': 'new_stone',
-                                        'coord': coord,
-                                        'stone': ColoredStone(color)})
+            self.__on_game_over(other_color(color), str(e))
+        message_to_send = {'type': 'new_stone',
+                           'coord': coord,
+                           'stone': ColoredStone(color)}
+        self._game.update_renderer(message_to_send)
+        self._broadcast_client_message(message_to_send)
+        if not is_redo:
+            self.__move_recorder.put((coord, color))
 
         (win_side, reason) = self._check_result(coord, color)
         if reason != None:
             self.__on_game_over(win_side, reason)
             return
         self.__next_color = other_color(self.__next_color)
+        print "next turn:" + str(self.__next_color)
+        self.__notify_client_to_move(self.__next_color)
+
+    def __handle_remove_stone(self, coord):
+        self._board.remove_stone(coord)
+
+        message_to_send = {'type': 'remove_stone',
+                           'coord': coord}
+        self._game.update_renderer(message_to_send)
+        self._broadcast_client_message(message_to_send)
+
+        self.__next_color = other_color(self.__next_color)
+        print "next turn:" + str(self.__next_color)
         self.__notify_client_to_move(self.__next_color)
 
     def __notify_client_to_move(self, color):
@@ -97,8 +115,9 @@ class GomokuRule(Rule):
         self._broadcast_client_message({'type': 'game_over',
                                         'win_side': win_side,
                                         'reason': reason})
-        for client_id in self._clients.keys():
-            self.disconnect(client_id)
+        if reason == "ui_exit":
+            for client_id in self._clients.keys():
+                self.disconnect(client_id)
 
     def _can_start(self):
         return len(self._clients) == 2
@@ -109,6 +128,21 @@ class GomokuRule(Rule):
 
     def __handle_ui_click(self, message):
         self._broadcast_client_message(message)
+
+    def __handle_ui_undo(self):
+        move = self.__move_recorder.undo()
+        if move == None:
+            return
+        coord, color = move
+        self.__handle_remove_stone(coord)
+
+    def __handle_ui_redo(self):
+        move = self.__move_recorder.redo()
+        if move == None:
+            return
+        coord, color = move
+        self.__handle_place_stone({'type': "place_stone", 'coord': coord, 'color': color},
+                                  is_redo = True)
 
     def __list_to_tuple_recursive(self, l):
         result = []

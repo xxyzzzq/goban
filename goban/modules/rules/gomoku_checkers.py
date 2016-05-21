@@ -64,7 +64,6 @@ class GomokuChecker:
         return (-direction[0], -direction[1])
 
     def _walk(self, board, start_coord, color, direction, max_steps, max_empty_slots):
-        print "walk start", start_coord, direction, max_steps, max_empty_slots
         result = []
         coord = start_coord
         steps = 0
@@ -83,7 +82,6 @@ class GomokuChecker:
             steps = steps + 1
             result.append(coord)
             coord = _next_coord(coord, direction)
-        print "walk stop", result
         return result
 
 class _GomokuChecker_Win(GomokuChecker):
@@ -224,9 +222,7 @@ class _GomokuChecker_44(GomokuChecker):
                 coords = _join_coords(coords1, coords2)
                 if len(coords) != 4:
                     continue
-                print "check_live4", coords1, coords2, coords, direction
                 if _check_live4(board, coords, direction, color):
-                    print "check_live4", coords1, coords2, coords, direction, "=TRUE"
                     count_4 = count_4 + 1
 
         return count_4 >= 2
@@ -238,18 +234,11 @@ class GomokuCheckerManager(GomokuChecker):
     def check(self, board, coord, color):
         copy_board = copy.deepcopy(board)
         if _GomokuChecker_Win().check(copy_board, coord, color):
-            print color, "5 in a row"
             return color, "5 in a row"
         if _GomokuChecker_LongConnection().check(copy_board, coord, color):
-            print other_color(color), "long connection"
             return other_color(color), "long connection"
-        print "checking 33"
         if _GomokuChecker_33().check(copy_board, coord, color):
-            print other_color(color), "33"
             return other_color(color), "33"
-        print "checking 44"
         if _GomokuChecker_44().check(copy_board, coord, color):
-            print other_color(color), "44"
             return other_color(color), "44"
-        print "no result"
         return None, None
