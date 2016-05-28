@@ -41,6 +41,7 @@ class GomokuRule(Rule):
 
         # Create board
         self._board = GoBoard(self.__list_to_tuple_recursive(self._args['dims']))
+        self.__sequence = 0
 
         # Broadcast game start
         for (client_id, client) in self._clients.items():
@@ -60,6 +61,8 @@ class GomokuRule(Rule):
         elif message['type'] == 'ui_redo':
             self.__handle_ui_redo()
         elif message['type'] == 'place_stone':
+            if message['sequence'] != self.__sequence:
+                return
             self.__handle_place_stone(message)
 
     def __handle_place_stone(self, message, is_redo = False):
@@ -107,8 +110,11 @@ class GomokuRule(Rule):
         self.__notify_client_to_move(self.__next_color)
 
     def __notify_client_to_move(self, color):
+        self.__sequence = self.__sequence + 1
         client_id = self._color_to_client_id[color]
-        self._send_client_message(self._clients[client_id], {'type': 'get_next_move'})
+        self._send_client_message(self._clients[client_id], {
+            'type': 'get_next_move',
+            'sequence': self.__sequence})
 
     def __on_game_over(self, win_side, reason):
         print "GAME_OVER", win_side, reason

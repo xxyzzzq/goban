@@ -98,7 +98,7 @@ class _GomokuChecker_Win(GomokuChecker):
                                  max_steps = 4,
                                  max_empty_slots = 0)
             length = len(coords1) + len(coords2) - 1
-            if color == WHITE_COLOR and length > 5:
+            if color == WHITE_COLOR and length >= 5:
                 return True
             if color == BLACK_COLOR and length == 5:
                 return True

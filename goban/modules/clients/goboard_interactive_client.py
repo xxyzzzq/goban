@@ -35,6 +35,7 @@ class GoBoardInteractiveClient(Client):
     def __handle_get_next_move(self, message):
         print "Client.get_next_move" + str(self.__color)
         self.__is_waiting_for_next_move = True
+        self.__sequence = message['sequence']
 
     def __handle_new_stone(self, message):
         print "Client.handle_new_stone"
@@ -57,7 +58,8 @@ class GoBoardInteractiveClient(Client):
         if self.__board.get_stone_at(coord) == None:
             self.send_message_to_game({'type': 'place_stone',
                                        'coord': coord,
-                                       'color': self.__color})
+                                       'color': self.__color,
+                                       'sequence': self.__sequence})
             self.__is_waiting_for_next_move = False
 
     def __handle_game_over(self, message):
